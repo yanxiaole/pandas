@@ -34,7 +34,10 @@ from pandas.errors import (
     ParserError,
 )
 
-from pandas.core.dtypes.common import is_integer
+from pandas.core.dtypes.common import (
+    is_integer,
+    is_numeric_dtype,
+)
 from pandas.core.dtypes.inference import is_dict_like
 
 from pandas.io.parsers.base_parser import (
@@ -151,12 +154,7 @@ class PythonParser(ParserBase):
             self._col_indices = list(range(len(self.columns)))
 
         self._parse_date_cols = self._validate_parse_dates_presence(self.columns)
-        no_thousands_columns: set[int] | None = None
-        if self.parse_dates:
-            no_thousands_columns = self._set_noconvert_dtype_columns(
-                self._col_indices, self.columns
-            )
-        self._no_thousands_columns = no_thousands_columns
+        self._no_thousands_columns = self._set_no_thousand_columns()
 
         if len(self.decimal) != 1:
             raise ValueError("Only length-1 decimal markers supported")
@@ -1147,6 +1145,24 @@ class PythonParser(ParserBase):
                 row for i, row in enumerate(new_rows) if not self.skipfunc(i + self.pos)
             ]
         return new_rows
+
+    def _set_no_thousand_columns(self) -> set[int]:
+        noconvert_columns = set()
+        if self.parse_dates:
+            noconvert_columns = self._set_noconvert_dtype_columns(
+                self._col_indices, self.names
+            )
+
+        if isinstance(self.dtype, dict):
+            for i in self._col_indices:
+                if not is_numeric_dtype(self.dtype.get(self.columns[i], None)):
+                    noconvert_columns.add(i)
+        else:
+            if not is_numeric_dtype(self.dtype):
+                for i in self._col_indices:
+                    noconvert_columns.add(i)
+
+        return noconvert_columns
 
 
 class FixedWidthReader(abc.Iterator):
