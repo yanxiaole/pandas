@@ -399,21 +399,21 @@ class StringArray(BaseStringArray, PandasArray):
         scalar_key = lib.is_scalar(key)
         scalar_value = lib.is_scalar(value)
         if scalar_key and not scalar_value:
-            raise ValueError("setting an array element with a sequence.")
+            raise TypeError("setting an array element with a sequence.")
 
         # validate new items
         if scalar_value:
             if isna(value):
                 value = libmissing.NA
             elif not isinstance(value, str):
-                raise ValueError(
+                raise TypeError(
                     f"Cannot set non-string value '{value}' into a StringArray."
                 )
         else:
             if not is_array_like(value):
                 value = np.asarray(value, dtype=object)
             if len(value) and not lib.is_string_array(value, skipna=True):
-                raise ValueError("Must provide strings.")
+                raise TypeError("Must provide strings.")
 
             value[isna(value)] = libmissing.NA
 
